@@ -1,4 +1,5 @@
-# Sudoku_solver
+# SUDOKU SOLVER
+
 A basic backtracking based square sudoku solver <br>
 Give input of number which defines number of rows and columns <br>
 This sudoku matrix takes input row-wise. <br>
