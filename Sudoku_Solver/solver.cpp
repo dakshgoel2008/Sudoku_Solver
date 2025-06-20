@@ -1,217 +1,126 @@
-#include <chrono>
-#include <cmath>
-#include <fstream>
-#include <iostream>
-#include <vector>
-
+#include <bits/stdc++.h>
 using namespace std;
+#define fastio()                                                               \
+  ios_base::sync_with_stdio(false);                                            \
+  cin.tie(NULL);                                                               \
+  cout.tie(NULL)
 
-class SudokuSolver {
-private:
-  vector<vector<int>> grid;
-  int n;
-  int sqrt_n;
-
-public:
-  SudokuSolver(int size) : n(size), sqrt_n(sqrt(size)) {
-    grid.resize(n, vector<int>(n, 0));
+bool safeHai(vector<vector<int>> &a, int i, int j, int no, int n) {
+  // 1. no row ya col mei nhi hona chahiye
+  for (int k = 0; k < n; ++k) {
+    if (a[k][j] == no || a[i][k] == no) {
+      return false;
+    }
   }
 
-  bool isValid(int row, int col, int num) {
-    // Check row
-    for (int j = 0; j < n; j++) {
-      if (grid[row][j] == num) {
+  // 2. no current 3x3 matrix mei nhi hona chahiye
+  int rn = sqrt(n); // rn = root of n (3 for 9x9)
+  int si = (i / rn) * rn;
+  int sj = (j / rn) * rn;
+
+  for (int r = si; r < si + rn; ++r) {
+    for (int c = sj; c < sj + rn; ++c) {
+      if (a[r][c] == no) {
         return false;
       }
     }
-
-    // Check column
-    for (int i = 0; i < n; i++) {
-      if (grid[i][col] == num) {
-        return false;
-      }
-    }
-
-    // Check 3x3 box
-    int box_row = (row / sqrt_n) * sqrt_n;
-    int box_col = (col / sqrt_n) * sqrt_n;
-
-    for (int i = box_row; i < box_row + sqrt_n; i++) {
-      for (int j = box_col; j < box_col + sqrt_n; j++) {
-        if (grid[i][j] == num) {
-          return false;
-        }
-      }
-    }
-
-    return true;
   }
 
-  bool solve() {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        if (grid[i][j] == 0) {
-          for (int num = 1; num <= n; num++) {
-            if (isValid(i, j, num)) {
-              grid[i][j] = num;
+  // Safe to place
+  return true;
+}
 
-              if (solve()) {
-                return true;
-              }
-
-              grid[i][j] = 0; // backtrack
-            }
-          }
-          return false;
-        }
-      }
-    }
-    return true; // All cells filled
+bool sudokuSolver(vector<vector<int>> &a, int i, int j, int n) {
+  // base case
+  if (i == n) {
+    return true; // Solution found, don't print here
   }
 
-  bool isValidSudoku() {
-    // Check if the initial configuration is valid
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        if (grid[i][j] != 0) {
-          int temp = grid[i][j];
-          grid[i][j] = 0; // Temporarily remove
-
-          if (!isValid(i, j, temp)) {
-            grid[i][j] = temp; // Restore
-            return false;
-          }
-
-          grid[i][j] = temp; // Restore
-        }
-      }
-    }
-    return true;
+  // If column ends, go to next row
+  if (j == n) {
+    return sudokuSolver(a, i + 1, 0, n);
   }
 
-  bool loadFromFile(const string &filename) {
-    ifstream file(filename);
-    if (!file.is_open()) {
-      cerr << "Error: Cannot open input file " << filename << endl;
-      return false;
-    }
-
-    file >> n;
-    if (n != 9) {
-      cerr << "Error: Only 9x9 sudoku puzzles are supported" << endl;
-      return false;
-    }
-
-    sqrt_n = sqrt(n);
-    grid.resize(n, vector<int>(n));
-
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        file >> grid[i][j];
-        if (grid[i][j] < 0 || grid[i][j] > n) {
-          cerr << "Error: Invalid digit " << grid[i][j] << " at position (" << i
-               << "," << j << ")" << endl;
-          return false;
-        }
-      }
-    }
-
-    file.close();
-    return true;
+  // If cell already filled, skip
+  if (a[i][j] != 0) {
+    return sudokuSolver(a, i, j + 1, n);
   }
 
-  bool saveToFile(const string &filename) {
-    ofstream file(filename);
-    if (!file.is_open()) {
-      cerr << "Error: Cannot create output file " << filename << endl;
-      return false;
-    }
-
-    file << n << endl;
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        file << grid[i][j];
-        if (j < n - 1)
-          file << " ";
+  // Try filling 1 to n
+  for (int no = 1; no <= n; ++no) {
+    if (safeHai(a, i, j, no, n)) {
+      a[i][j] = no;
+      if (sudokuSolver(a, i, j + 1, n)) {
+        return true;
       }
-      file << endl;
+      a[i][j] = 0; // Backtrack
     }
-
-    file.close();
-    return true;
   }
 
-  void printGrid() {
-    cout << "Sudoku Grid:" << endl;
-    for (int i = 0; i < n; i++) {
-      if (i % 3 == 0 && i != 0) {
-        cout << "------+-------+------" << endl;
-      }
-      for (int j = 0; j < n; j++) {
-        if (j % 3 == 0 && j != 0) {
-          cout << "| ";
-        }
-        cout << grid[i][j] << " ";
-      }
-      cout << endl;
+  return false;
+}
+
+int main() {
+  fastio();
+
+  // Read from file, not from cin
+  ifstream inFile("input_board.txt");
+  if (!inFile) {
+    cerr << "Error: Cannot open input_board.txt" << endl;
+    return 1;
+  }
+
+  int n = 9;
+  vector<vector<int>> board(n, vector<int>(n));
+
+  // Read from file
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j) {
+      inFile >> board[i][j];
+    }
+  }
+  inFile.close();
+
+  // Debug: Print input board
+  cout << "Input board:" << endl;
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j) {
+      cout << board[i][j] << " ";
     }
     cout << endl;
   }
 
-  int countFilledCells() {
-    int count = 0;
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        if (grid[i][j] != 0) {
-          count++;
-        }
-      }
+  // Solve the sudoku
+  if (sudokuSolver(board, 0, 0, n)) {
+    cout << "Solution found!" << endl;
+
+    // Write solution to output file
+    ofstream outFile("output_board.txt");
+    if (!outFile) {
+      cerr << "Error: Cannot create output_board.txt" << endl;
+      return 1;
     }
-    return count;
-  }
-};
 
-int main(int argc, char *argv[]) {
-  if (argc != 3) {
-    cout << "Usage: " << argv[0] << " <input_file> <output_file>" << endl;
-    cout << "Example: " << argv[0] << " puzzle.txt solution.txt" << endl;
-    return 1;
-  }
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < n; ++j) {
+        outFile << board[i][j];
+        if (j < n - 1)
+          outFile << " ";
+      }
+      outFile << endl;
+    }
+    outFile.close();
 
-  string inputFile = argv[1];
-  string outputFile = argv[2];
-
-  SudokuSolver solver(9);
-
-  // Load the puzzle
-  if (!solver.loadFromFile(inputFile)) {
-    return 1;
-  }
-
-  cout << "Loaded puzzle from " << inputFile << endl;
-  cout << "Filled cells: " << solver.countFilledCells() << "/81" << endl;
-
-  // Validate the initial configuration
-  if (!solver.isValidSudoku()) {
-    cout << "Error: Invalid sudoku configuration" << endl;
-    return 1;
-  }
-
-  // Solve the puzzle
-  auto start = chrono::high_resolution_clock::now();
-  bool solved = solver.solve();
-  auto end = chrono::high_resolution_clock::now();
-
-  auto duration = chrono::duration_cast<chrono::milliseconds>(end - start);
-
-  if (solved) {
-    cout << "Solution found in " << duration.count() << " milliseconds" << endl;
-
-    if (solver.saveToFile(outputFile)) {
-      cout << "Solution saved to " << outputFile << endl;
+    // Also print to console for debugging
+    cout << "Solved board:" << endl;
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < n; ++j) {
+        cout << board[i][j] << " ";
+      }
+      cout << endl;
     }
   } else {
-    cout << "No solution exists for this puzzle" << endl;
+    cout << "No solution exists!" << endl;
     return 1;
   }
 

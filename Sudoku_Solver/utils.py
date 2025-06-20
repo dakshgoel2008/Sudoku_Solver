@@ -1,10 +1,19 @@
+import os
+
 import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
 
 
 def initializePredictModel():
-    model = load_model("./model/sudoku_digit_model.h5")
+    base_dir = os.path.dirname(
+        os.path.abspath(__file__)
+    )  # path to current file (utils.py)
+    model_path = os.path.join(base_dir, "..", "CNN_Digit_Classifier", "best_model.h5")
+    model_path = os.path.abspath(model_path)  # ensure absolute path
+
+    print("Loading model from:", model_path)
+    model = load_model(model_path)
     return model
 
 
@@ -66,9 +75,9 @@ def getPrediction(boxes, model):
         # PREPARING THE IMAGE FOR PREDICTION
         img = np.asarray(image)
         img = img[4 : img.shape[0] - 4, 4 : img.shape[1] - 4]  # removing borders
-        img = cv2.resize(img, (28, 28))  # resizing to 28x28
+        img = cv2.resize(img, (32, 32))
         img = img / 255.0  # normalizing the image
-        img = img.reshape(1, 28, 28, 1)
+        img = img.reshape(1, 32, 32, 1)
 
         # GETTING THE PREDICTION
         predictions = model.predict(img)

@@ -6,15 +6,7 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from tensorflow.keras.layers import (
-    BatchNormalization,
-    Conv2D,
-    Dense,
-    Dropout,
-    Flatten,
-    GlobalAveragePooling2D,
-    MaxPooling2D,
-)
+from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -23,10 +15,10 @@ from tensorflow.keras.utils import to_categorical
 
 # Configuration
 CONFIG = {
-    "path": "db",
+    "path": os.path.join(os.path.dirname(__file__), "db"),
     "test_ratio": 0.2,
     "val_ratio": 0.2,
-    "img_dimension": (64, 64, 3),  # Increased size for better feature extraction
+    "img_dimension": (32, 32, 3),
     "batch_size": 32,
     "epochs": 100,
     "learning_rate": 0.001,
@@ -35,16 +27,21 @@ CONFIG = {
 
 def load_data(path):
     """Load and preprocess images from directory structure"""
-    images = []
-    class_labels = []
+    images = []  # stores the images
+    class_labels = []  # stores the labels
 
     try:
-        class_dirs = os.listdir(path)
-        print(f"Total number of classes detected: {len(class_dirs)}")
+        class_dirs = [
+            d for d in os.listdir(path) if os.path.isdir(os.path.join(path, d))
+        ]
+        # Ensuring class directories are sorted numerically if they represent class labels
+        class_dirs.sort(key=int)
+        # print(f"Total number of classes detected: {len(class_dirs)}")
         num_classes = len(class_dirs)
 
-        for class_idx in range(num_classes):
-            class_path = os.path.join(path, str(class_idx))
+        for class_idx_str in class_dirs:
+            class_idx = int(class_idx_str)
+            class_path = os.path.join(path, class_idx_str)
             if not os.path.exists(class_path):
                 print(f"Warning: Class directory {class_path} not found")
                 continue
@@ -57,7 +54,7 @@ def load_data(path):
                 img = cv2.imread(img_path)
 
                 if img is not None:
-                    # Resize image
+                    # Resize image - preprocess_image will handle grayscale
                     img = cv2.resize(
                         img, (CONFIG["img_dimension"][0], CONFIG["img_dimension"][1])
                     )
@@ -91,12 +88,12 @@ def create_data_generators(X_train, y_train, X_val, y_val):
     """Create data generators with augmentation"""
     # Training data generator with augmentation
     train_datagen = ImageDataGenerator(
-        rotation_range=20,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        shear_range=0.2,
-        zoom_range=0.2,
-        horizontal_flip=True,
+        rotation_range=10,  # Reduced range slightly for digits
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        shear_range=0.1,
+        zoom_range=0.1,
+        horizontal_flip=False,
         fill_mode="nearest",
     )
 
@@ -114,45 +111,46 @@ def create_data_generators(X_train, y_train, X_val, y_val):
     return train_generator, val_generator
 
 
-def create_improved_model(num_classes, input_shape):
-    """Create an improved CNN model with modern architecture"""
+def my_model(num_classes, input_shape):
+    """My CNN model for digit recognition"""
+    noOfFilters = 60
+    sizeOfFilter1 = (5, 5)
+    sizeOfFilter2 = (3, 3)
+    sizeOfPool = (2, 2)
+    noOfNode = 500
     model = Sequential(
         [
-            # First Convolutional Block
-            Conv2D(32, (3, 3), activation="relu", input_shape=input_shape),
-            BatchNormalization(),
-            Conv2D(32, (3, 3), activation="relu"),
-            MaxPooling2D((2, 2)),
-            Dropout(0.25),
-            # Second Convolutional Block
-            Conv2D(64, (3, 3), activation="relu"),
-            BatchNormalization(),
-            Conv2D(64, (3, 3), activation="relu"),
-            MaxPooling2D((2, 2)),
-            Dropout(0.25),
-            # Third Convolutional Block
-            Conv2D(128, (3, 3), activation="relu"),
-            BatchNormalization(),
-            Conv2D(128, (3, 3), activation="relu"),
-            MaxPooling2D((2, 2)),
-            Dropout(0.25),
-            # Fourth Convolutional Block
-            Conv2D(256, (3, 3), activation="relu"),
-            BatchNormalization(),
-            Dropout(0.25),
-
-            GlobalAveragePooling2D(),
-            # Dense layers
-            Dense(512, activation="relu", kernel_regularizer=l2(0.001)),
+            Conv2D(
+                noOfFilters,
+                sizeOfFilter1,
+                input_shape=input_shape,
+                activation="relu",
+            ),
+            Conv2D(
+                noOfFilters,
+                sizeOfFilter1,
+                activation="relu",
+            ),
+            MaxPooling2D(pool_size=sizeOfPool),
+            Conv2D(
+                noOfFilters // 2,
+                (sizeOfFilter2[0] // 2, sizeOfFilter2[1] // 2),  # FIXED LINE
+                activation="relu",
+            ),
+            Conv2D(
+                noOfFilters,
+                sizeOfFilter2,
+                activation="relu",
+            ),
+            MaxPooling2D(pool_size=sizeOfPool),
             Dropout(0.5),
-            Dense(256, activation="relu", kernel_regularizer=l2(0.001)),
+            Flatten(),
+            Dense(noOfNode, activation="relu"),
             Dropout(0.5),
-            # Output layer
             Dense(num_classes, activation="softmax"),
         ]
     )
 
-    # Compile model
     model.compile(
         optimizer=Adam(learning_rate=CONFIG["learning_rate"]),
         loss="categorical_crossentropy",
@@ -166,10 +164,17 @@ def create_callbacks():
     """Create training callbacks"""
     callbacks = [
         EarlyStopping(
-            monitor="val_loss", patience=15, restore_best_weights=True, verbose=1
+            monitor="val_loss",
+            patience=20,
+            restore_best_weights=True,
+            verbose=1,  # Increased patience
         ),
         ReduceLROnPlateau(
-            monitor="val_loss", factor=0.2, patience=8, min_lr=1e-7, verbose=1
+            monitor="val_loss",
+            factor=0.2,
+            patience=10,
+            min_lr=1e-7,
+            verbose=1,  # Increased patience
         ),
         ModelCheckpoint(
             "best_model.h5", monitor="val_accuracy", save_best_only=True, verbose=1
@@ -209,8 +214,10 @@ def main():
     print("Loading data...")
     images, class_labels, num_classes = load_data(CONFIG["path"])
 
-    if images is None:
-        print("Failed to load data. Please check your data directory.")
+    if images is None or num_classes == 0:
+        print(
+            "Failed to load data or no classes found. Please check your data directory and structure."
+        )
         return
 
     print(f"Total images loaded: {len(images)}")
@@ -228,7 +235,9 @@ def main():
     X_train, X_val, y_train, y_val = train_test_split(
         X_train,
         y_train,
-        test_size=CONFIG["val_ratio"],
+        test_size=CONFIG[
+            "val_ratio"
+        ],  # This is val_ratio of the *remaining* data (after test split)
         random_state=42,
         stratify=y_train,
     )
@@ -250,16 +259,17 @@ def main():
 
     # Preprocess images
     print("Preprocessing images...")
+    # Apply preprocessing to all sets
     X_train = np.array([preprocess_image(img) for img in X_train])
     X_val = np.array([preprocess_image(img) for img in X_val])
     X_test = np.array([preprocess_image(img) for img in X_test])
 
-    # Reshape for CNN (add channel dimension)
+    # Reshape for CNN (add channel dimension for grayscale)
     X_train = X_train.reshape(X_train.shape[0], X_train.shape[1], X_train.shape[2], 1)
     X_val = X_val.reshape(X_val.shape[0], X_val.shape[1], X_val.shape[2], 1)
     X_test = X_test.reshape(X_test.shape[0], X_test.shape[1], X_test.shape[2], 1)
 
-    # Convert labels to categorical
+    # Convert labels to categorical (one-hot encoding)
     y_train = to_categorical(y_train, num_classes)
     y_val = to_categorical(y_val, num_classes)
     y_test = to_categorical(y_test, num_classes)
@@ -271,8 +281,9 @@ def main():
 
     # Create model
     print("Creating model...")
+    # Input shape is (height, width, channels). For grayscale, channels=1.
     input_shape = (CONFIG["img_dimension"][0], CONFIG["img_dimension"][1], 1)
-    model = create_improved_model(num_classes, input_shape)
+    model = my_model(num_classes, input_shape)
 
     # Print model summary
     model.summary()
@@ -283,6 +294,12 @@ def main():
     # Calculate steps per epoch
     steps_per_epoch = len(X_train) // CONFIG["batch_size"]
     validation_steps = len(X_val) // CONFIG["batch_size"]
+    if (
+        steps_per_epoch == 0
+    ):  # Ensure steps_per_epoch is at least 1 for very small datasets
+        steps_per_epoch = 1
+    if validation_steps == 0:
+        validation_steps = 1
 
     # Train model
     print("Starting training...")
