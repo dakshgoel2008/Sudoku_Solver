@@ -6,11 +6,12 @@ from tensorflow.keras.models import load_model
 
 
 def initializePredictModel():
-    base_dir = os.path.dirname(
-        os.path.abspath(__file__)
-    )  # path to current file (utils.py)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # best_model.h5 is the best model and final_model.h5 is the final model after training
+    # just created for callback and tried to use early stopping for better results.
     model_path = os.path.join(base_dir, "..", "CNN_Digit_Classifier", "best_model.h5")
-    model_path = os.path.abspath(model_path)  # ensure absolute path
+
+    model_path = os.path.abspath(model_path)
 
     print("Loading model from:", model_path)
     model = load_model(model_path)
@@ -18,6 +19,7 @@ def initializePredictModel():
 
 
 def preProcess(img):
+    """function for preprocessing the image"""
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # converting to grayscale
     imgBlur = cv2.GaussianBlur(imgGray, (5, 5), 1)
     imgThreshold = cv2.adaptiveThreshold(

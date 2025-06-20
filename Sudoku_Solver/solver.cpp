@@ -6,14 +6,14 @@ using namespace std;
   cout.tie(NULL)
 
 bool safeHai(vector<vector<int>> &a, int i, int j, int no, int n) {
-  // 1. no row ya col mei nhi hona chahiye
+  // 1. same no (number) row ya col mei nhi hona chahiye
   for (int k = 0; k < n; ++k) {
     if (a[k][j] == no || a[i][k] == no) {
       return false;
     }
   }
 
-  // 2. no current 3x3 matrix mei nhi hona chahiye
+  // 2. "no" current 3x3 matrix mei nhi hona chahiye
   int rn = sqrt(n); // rn = root of n (3 for 9x9)
   int si = (i / rn) * rn;
   int sj = (j / rn) * rn;
@@ -33,7 +33,7 @@ bool safeHai(vector<vector<int>> &a, int i, int j, int no, int n) {
 bool sudokuSolver(vector<vector<int>> &a, int i, int j, int n) {
   // base case
   if (i == n) {
-    return true; // Solution found, don't print here
+    return true; // Solution found
   }
 
   // If column ends, go to next row
@@ -63,7 +63,7 @@ bool sudokuSolver(vector<vector<int>> &a, int i, int j, int n) {
 int main() {
   fastio();
 
-  // Read from file, not from cin
+  // Reading data from file
   ifstream inFile("input_board.txt");
   if (!inFile) {
     cerr << "Error: Cannot open input_board.txt" << endl;
@@ -81,7 +81,7 @@ int main() {
   }
   inFile.close();
 
-  // Debug: Print input board
+  // Lets Print input board
   cout << "Input board:" << endl;
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < n; ++j) {
@@ -111,14 +111,14 @@ int main() {
     }
     outFile.close();
 
-    // Also print to console for debugging
-    cout << "Solved board:" << endl;
-    for (int i = 0; i < n; ++i) {
-      for (int j = 0; j < n; ++j) {
-        cout << board[i][j] << " ";
-      }
-      cout << endl;
-    }
+    // // print to console for debugging
+    // cout << "Solved board:" << endl;
+    // for (int i = 0; i < n; ++i) {
+    //   for (int j = 0; j < n; ++j) {
+    //     cout << board[i][j] << " ";
+    //   }
+    //   cout << endl;
+    // }
   } else {
     cout << "No solution exists!" << endl;
     return 1;

@@ -2,41 +2,51 @@ import os
 import subprocess
 import sys
 
+import cv2
+import numpy as np
 from utils import *
 
-imagePath = os.path.join(os.getcwd(), "Sudoku_Solver", "images", "sudoku2.jpg")
+# I will replace it with the backend logic later
+imagePath = os.path.join(
+    os.getcwd(), "Sudoku_Solver", "images", "sudoku2.jpg"
+)  # just a sample image for now
 imgHeight = 450
 imgWidth = 450
-print(f"Image path: {imagePath}")
+# print(f"Image path: {imagePath}")
 
-# Initialize the CNN model
+# Initializing the CNN model
 model = initializePredictModel()
 
-# Prepare the image
+# Preparing the image
 img = cv2.imread(imagePath)
-if img is None:
+
+if img is None:  # fixing the issue of runtime error here yaar.
     print(f"Error: Could not load image from {imagePath}")
     sys.exit(1)
 
-img = cv2.resize(img, (imgWidth, imgHeight))
-imgBlank = np.zeros((imgHeight, imgWidth, 3), np.uint8)
-imgThreshold = preProcess(img)
+img = cv2.resize(img, (imgWidth, imgHeight))  # resizing the window
+imgBlank = np.zeros(
+    (imgHeight, imgWidth, 3), np.uint8
+)  # blank image which will be overlayed later as the image are processed.
+imgThreshold = preProcess(img)  # see utils.py
 
 # Find contours
 imgCountours = img.copy()
 imgBigCountour = img.copy()
+# just finding the contours in the binary image.
 contours, hierachy = cv2.findContours(
     imgThreshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-)
+)  # RETR_EXTERNAL -> returns only the extreme outer contours. CHAIN_APPROX_SIMPLE -> returns only the end points of the contours
 cv2.drawContours(imgCountours, contours, -1, (0, 255, 0), 3)
 
-# Find the biggest contour
+# Find the biggest contour -> biggest contour is nothing but our grid of sudoku.
 biggest, maxArea = biggestContour(contours)
 if biggest.size != 0:
-    biggest = reorder(biggest)
+    # biggest 4 point contour is our grid -> recognised by red color polka dots here.
+    biggest = reorder(biggest)  # [top-left, top-right, bottom-left, bottom-right]
     cv2.drawContours(imgBigCountour, biggest, -1, (0, 0, 255), 20)
 
-    # Warp perspective
+    # Warp perspective -> just stretching and squeezing the image dude for bird's eye view
     pts1 = np.float32(biggest)
     pts2 = np.float32([[0, 0], [imgWidth, 0], [0, imgHeight], [imgWidth, imgHeight]])
     matrix = cv2.getPerspectiveTransform(pts1, pts2)
@@ -162,15 +172,70 @@ if biggest.size != 0:
         # Convert to NumPy array for further processing
         solved_board = np.array(solved_board)
 
-        # Create image showing solved digits
+        # NOTE: **NEW CODE: Create overlay with only missing digits**
+        def displaySolutionNumbers(
+            img, originalNumbers, solvedNumbers, color=(0, 255, 0)
+        ):
+            """
+            Display only the solved digits that were originally missing (0s)
+            """
+            secW = int(img.shape[1] / 9)
+            secH = int(img.shape[0] / 9)
+
+            for x in range(0, 9):
+                for y in range(0, 9):
+                    # Only display if the original position was empty (0)
+                    if originalNumbers[y * 9 + x] == 0:
+                        cv2.putText(
+                            img,
+                            str(int(solvedNumbers[y * 9 + x])),
+                            (x * secW + int(secW / 2) - 10, int((y + 0.8) * secH)),
+                            cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                            2,
+                            color,
+                            2,
+                            cv2.LINE_AA,
+                        )
+            return img
+
+        # Create the overlay image showing only solved digits
+        imgSolvedOverlay = cv2.warpPerspective(img, matrix, (imgWidth, imgHeight))
         solved_numbers = solved_board.flatten()
+        imgSolvedOverlay = displaySolutionNumbers(
+            imgSolvedOverlay, numbers, solved_numbers, color=(0, 255, 0)
+        )
+
+        # **Optional: Create inverse perspective to show on original image**
+        # Get inverse transformation matrix
+        matrix_inv = cv2.getPerspectiveTransform(pts2, pts1)
+
+        # Create the solution overlay on warped image first
+        imgSolutionWarped = imgBlank.copy()
+        imgSolutionWarped = displaySolutionNumbers(
+            imgSolutionWarped, numbers, solved_numbers, color=(0, 255, 0)
+        )
+
+        # Warp the solution back to original perspective
+        imgSolutionOriginal = cv2.warpPerspective(
+            imgSolutionWarped, matrix_inv, (imgWidth, imgHeight)
+        )
+
+        # Combine original image with solution overlay
+        imgFinalResult = img.copy()
+        # Create mask for non-zero pixels in the solution overlay
+        mask = cv2.cvtColor(imgSolutionOriginal, cv2.COLOR_BGR2GRAY)
+        mask = np.where(mask > 0, 1, 0).astype(np.uint8)
+
+        # Apply the overlay
+        for c in range(3):
+            imgFinalResult[:, :, c] = np.where(
+                mask == 1, imgSolutionOriginal[:, :, c], imgFinalResult[:, :, c]
+            )
+
+        # Also create image showing solved digits on warped perspective
         imgSolvedDigits = displayNumbers(
             imgBlank.copy(), solved_numbers, color=(0, 255, 0)
         )
-
-        # Clean up temporary files (optional)
-        # os.remove(input_file)
-        # os.remove(output_file)
 
     except Exception as e:
         print(f"Error reading solved board: {e}")
@@ -179,14 +244,21 @@ if biggest.size != 0:
 else:
     print("No Sudoku board detected in the image")
     imgSolvedDigits = imgBlank.copy()
+    imgSolvedOverlay = imgBlank.copy()
+    imgFinalResult = img.copy()
 
-# Display images
+# Display images - Updated to show the overlay results
 imgArray = (
     [img, imgThreshold, imgCountours, imgBigCountour],
-    [imgDetectedDigits, imgSolvedDigits, imgBlank, imgBlank],
+    [imgDetectedDigits, imgSolvedOverlay, imgBlank, imgBlank],
 )
 stacked_images = stackedImages(imgArray, 1)
 cv2.namedWindow("Stacked Images", cv2.WINDOW_NORMAL)
 cv2.imshow("Stacked Images", stacked_images)
+
+# Optional: Save the final result
+cv2.imwrite("sudoku_solved_overlay.jpg", imgSolvedOverlay)
+print("Final result saved as 'sudoku_solved_overlay.jpg'")
+
 cv2.waitKey(0)
 cv2.destroyAllWindows()
