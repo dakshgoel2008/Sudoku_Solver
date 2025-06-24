@@ -2,3 +2,8 @@ test.py
 solver.exe
 .vscode
 images
+documentation.md
+finalAnswer.jpg
+input_board.txt
+output_board.txt
+__pycache__/

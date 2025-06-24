@@ -332,8 +332,8 @@ def main():
 
 if __name__ == "__main__":
     # Set random seeds for reproducibility
-    np.random.seed(42)
-    tf.random.set_seed(42)
+    np.random.seed(43)
+    tf.random.set_seed(43)
 
     # Run main pipeline
     model, history = main()

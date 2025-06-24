@@ -30,7 +30,7 @@ bool safeHai(vector<vector<int>> &a, int i, int j, int no, int n) {
   return true;
 }
 
-bool sudokuSolver(vector<vector<int>> &a, int i, int j, int n) {
+bool solveKaro(vector<vector<int>> &a, int i, int j, int n) {
   // base case
   if (i == n) {
     return true; // Solution found
@@ -38,19 +38,19 @@ bool sudokuSolver(vector<vector<int>> &a, int i, int j, int n) {
 
   // If column ends, go to next row
   if (j == n) {
-    return sudokuSolver(a, i + 1, 0, n);
+    return solveKaro(a, i + 1, 0, n);
   }
 
   // If cell already filled, skip
   if (a[i][j] != 0) {
-    return sudokuSolver(a, i, j + 1, n);
+    return solveKaro(a, i, j + 1, n);
   }
 
   // Try filling 1 to n
   for (int no = 1; no <= n; ++no) {
     if (safeHai(a, i, j, no, n)) {
       a[i][j] = no;
-      if (sudokuSolver(a, i, j + 1, n)) {
+      if (solveKaro(a, i, j + 1, n)) {
         return true;
       }
       a[i][j] = 0; // Backtrack
@@ -91,7 +91,7 @@ int main() {
   }
 
   // Solve the sudoku
-  if (sudokuSolver(board, 0, 0, n)) {
+  if (solveKaro(board, 0, 0, n)) {
     cout << "Solution found!" << endl;
 
     // Write solution to output file
@@ -110,15 +110,6 @@ int main() {
       outFile << endl;
     }
     outFile.close();
-
-    // // print to console for debugging
-    // cout << "Solved board:" << endl;
-    // for (int i = 0; i < n; ++i) {
-    //   for (int j = 0; j < n; ++j) {
-    //     cout << board[i][j] << " ";
-    //   }
-    //   cout << endl;
-    // }
   } else {
     cout << "No solution exists!" << endl;
     return 1;
