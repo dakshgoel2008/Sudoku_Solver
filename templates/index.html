@@ -223,27 +223,21 @@
             const newSolveBtn = document.getElementById("newSolveBtn");
             const dropZoneText = document.getElementById("dropZoneText");
 
-            // UX Improvement: Error Banner elements
             const errorBanner = document.getElementById("errorBanner");
             const errorMessage = document.getElementById("errorMessage");
 
-            // --- BUG FIX: Store the current file in a variable ---
             let currentFile = null;
 
-            // Click to upload
             dropZone.addEventListener("click", () => fileInput.click());
 
-            // Drag and drop functionality
             dropZone.addEventListener("dragover", (e) => {
                 e.preventDefault();
                 dropZone.classList.add("drag-over");
-                // UX Improvement: Change text on drag over
                 dropZoneText.textContent = "Release to upload image";
             });
 
             dropZone.addEventListener("dragleave", () => {
                 dropZone.classList.remove("drag-over");
-                // UX Improvement: Reset text
                 dropZoneText.textContent = "Drop your Sudoku image here";
             });
 
@@ -257,7 +251,6 @@
                 }
             });
 
-            // File input change
             fileInput.addEventListener("change", (e) => {
                 if (e.target.files.length > 0) {
                     handleFile(e.target.files[0]);
@@ -271,7 +264,6 @@
                 }
                 hideError();
 
-                // --- BUG FIX: Update the currentFile variable ---
                 currentFile = file;
                 fileInput.files = new DataTransfer().files; // Clear file input in case it was used before drop
 
@@ -288,9 +280,7 @@
                 reader.readAsDataURL(file);
             }
 
-            // Solve button click
             solveBtn.addEventListener("click", async () => {
-                // --- BUG FIX: Check currentFile instead of fileInput ---
                 if (!currentFile) {
                     showError("Please upload an image first.");
                     return;
@@ -302,7 +292,6 @@
                 outputPreview.classList.add("hidden");
                 loadingState.classList.remove("hidden");
 
-                // UX Improvement: Dynamic loading messages
                 const loadingMessages = ["Analyzing grid...", "Recognizing numbers...", "Solving puzzle..."];
                 let messageIndex = 0;
                 loadingText.textContent = loadingMessages[messageIndex];
@@ -312,7 +301,6 @@
                 }, 2000);
 
                 const formData = new FormData();
-                // --- BUG FIX: Append currentFile ---
                 formData.append("file", currentFile);
 
                 try {
@@ -339,7 +327,6 @@
                 }
             });
 
-            // UX Improvement: Functions to show/hide the error banner
             function showError(message) {
                 errorMessage.textContent = message;
                 errorBanner.classList.remove("hidden");
@@ -357,7 +344,6 @@
                 link.click();
             });
 
-            // New solve button
             newSolveBtn.addEventListener("click", () => {
                 currentFile = null;
                 fileInput.value = "";
