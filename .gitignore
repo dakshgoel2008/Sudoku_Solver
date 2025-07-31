@@ -7,3 +7,5 @@ finalAnswer.jpg
 input_board.txt
 output_board.txt
 __pycache__/
+.venv
+Sudoku_Solver/images

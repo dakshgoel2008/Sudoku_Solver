@@ -1,8 +1,8 @@
 # SUDOKU BUDDY
 
-This is a project that uses OpenCV in Python to recognise the sudoku grid and digits which can be classified using a CNN model and then passed to a C++ backtracking code snippet to solve the unsolved sudoku.
+A smart Sudoku solver that combines the power of OpenCV + CNN + C++ backtracking to recognize, read, and solve Sudoku puzzles straight from an image.
 
-Currently working on the frontend and backend(using Flask {as it is easy to implement in Python😁😁})
+Currently building out the frontend and backend using Flask (because Python + ease = happy dev 😁😁)
 
 ## Implementation Overview
 

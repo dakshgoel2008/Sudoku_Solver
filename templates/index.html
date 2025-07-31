@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Visual Sudoku Solver</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <style>
+            .drag-over {
+                border-color: #3b82f6;
+                background-color: #eff6ff;
+            }
+            .image-preview {
+                max-width: 400px;
+                max-height: 400px;
+                object-fit: contain;
+            }
+            .glow {
+                box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            }
+            .fade-in {
+                animation: fadeIn 0.5s ease-in-out;
+            }
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: scale(0.95);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+            .error-banner {
+                transition: all 0.3s ease-in-out;
+            }
+        </style>
+    </head>
+    <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+        <div class="container mx-auto px-4 py-8">
+            <div class="text-center mb-12">
+                <h1 class="text-5xl font-bold text-gray-800 mb-4">Visual Sudoku Solver</h1>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                    Upload an image of your unsolved Sudoku puzzle and get the solution instantly!
+                </p>
+            </div>
+
+            <div
+                id="errorBanner"
+                class="hidden max-w-6xl mx-auto mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg error-banner"
+            >
+                <span id="errorMessage"></span>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+                <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            ></path>
+                        </svg>
+                        Upload Sudoku Image
+                    </h2>
+
+                    <div
+                        id="dropZone"
+                        class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center transition-all duration-300 hover:border-blue-400 hover:bg-blue-50 cursor-pointer"
+                    >
+                        <svg
+                            class="mx-auto h-16 w-16 text-gray-400 mb-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            ></path>
+                        </svg>
+                        <p id="dropZoneText" class="text-lg text-gray-600 mb-2">Drop your Sudoku image here</p>
+                        <p class="text-sm text-gray-500 mb-4">or click to browse files</p>
+                        <div class="flex justify-center space-x-2 text-xs text-gray-400">
+                            <span class="bg-gray-100 px-2 py-1 rounded">PNG</span>
+                            <span class="bg-gray-100 px-2 py-1 rounded">JPG</span>
+                            <span class="bg-gray-100 px-2 py-1 rounded">JPEG</span>
+                        </div>
+                    </div>
+
+                    <input type="file" id="fileInput" accept="image/*" class="hidden" />
+
+                    <div id="inputPreview" class="mt-6 hidden">
+                        <h3 class="text-lg font-medium text-gray-800 mb-3">Original Sudoku:</h3>
+                        <div class="bg-gray-50 rounded-xl p-4 text-center">
+                            <img
+                                id="inputImage"
+                                class="image-preview mx-auto rounded-lg shadow-md"
+                                alt="Input Sudoku"
+                            />
+                        </div>
+                    </div>
+
+                    <button
+                        id="solveBtn"
+                        class="w-full mt-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold py-4 px-6 rounded-xl shadow-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none hidden"
+                    >
+                        <span class="flex items-center justify-center"> Solve Sudoku </span>
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-lg p-8">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                        <svg class="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                            ></path>
+                        </svg>
+                        Solved Sudoku
+                    </h2>
+
+                    <div id="loadingState" class="hidden text-center py-12">
+                        <div class="inline-flex items-center">
+                            <svg class="animate-spin h-8 w-8 text-blue-500 mr-3" fill="none" viewBox="0 0 24 24">
+                                <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                ></circle>
+                                <path
+                                    class="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                ></path>
+                            </svg>
+                            <span id="loadingText" class="text-lg text-gray-600">Solving your Sudoku...</span>
+                        </div>
+                    </div>
+
+                    <div id="placeholderState" class="text-center py-12">
+                        <div class="bg-gray-100 rounded-xl p-8">
+                            <svg
+                                class="mx-auto h-16 w-16 text-gray-400 mb-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                ></path>
+                            </svg>
+                            <p class="text-lg text-gray-500">Your solved Sudoku will appear here</p>
+                            <p class="text-sm text-gray-400 mt-2">Upload an image to get started</p>
+                        </div>
+                    </div>
+
+                    <div id="outputPreview" class="hidden">
+                        <div class="bg-green-50 rounded-xl p-4 text-center border border-green-200">
+                            <img
+                                id="outputImage"
+                                class="image-preview mx-auto rounded-lg shadow-md glow"
+                                alt="Solved Sudoku"
+                            />
+                            <div class="mt-4 flex justify-center space-x-3">
+                                <button
+                                    id="downloadBtn"
+                                    class="bg-green-500 hover:bg-green-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
+                                >
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                                        ></path></svg
+                                    >Download
+                                </button>
+                                <button
+                                    id="newSolveBtn"
+                                    class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center"
+                                >
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                        ></path></svg
+                                    >Solve Another
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const dropZone = document.getElementById("dropZone");
+            const fileInput = document.getElementById("fileInput");
+            const inputPreview = document.getElementById("inputPreview");
+            const inputImage = document.getElementById("inputImage");
+            const solveBtn = document.getElementById("solveBtn");
+            const loadingState = document.getElementById("loadingState");
+            const loadingText = document.getElementById("loadingText");
+            const placeholderState = document.getElementById("placeholderState");
+            const outputPreview = document.getElementById("outputPreview");
+            const outputImage = document.getElementById("outputImage");
+            const downloadBtn = document.getElementById("downloadBtn");
+            const newSolveBtn = document.getElementById("newSolveBtn");
+            const dropZoneText = document.getElementById("dropZoneText");
+
+            // UX Improvement: Error Banner elements
+            const errorBanner = document.getElementById("errorBanner");
+            const errorMessage = document.getElementById("errorMessage");
+
+            // --- BUG FIX: Store the current file in a variable ---
+            let currentFile = null;
+
+            // Click to upload
+            dropZone.addEventListener("click", () => fileInput.click());
+
+            // Drag and drop functionality
+            dropZone.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                dropZone.classList.add("drag-over");
+                // UX Improvement: Change text on drag over
+                dropZoneText.textContent = "Release to upload image";
+            });
+
+            dropZone.addEventListener("dragleave", () => {
+                dropZone.classList.remove("drag-over");
+                // UX Improvement: Reset text
+                dropZoneText.textContent = "Drop your Sudoku image here";
+            });
+
+            dropZone.addEventListener("drop", (e) => {
+                e.preventDefault();
+                dropZone.classList.remove("drag-over");
+                dropZoneText.textContent = "Drop your Sudoku image here";
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+
+            // File input change
+            fileInput.addEventListener("change", (e) => {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+
+            function handleFile(file) {
+                if (!file.type.startsWith("image/")) {
+                    showError("Please upload a valid image file (PNG, JPG, JPEG).");
+                    return;
+                }
+                hideError();
+
+                // --- BUG FIX: Update the currentFile variable ---
+                currentFile = file;
+                fileInput.files = new DataTransfer().files; // Clear file input in case it was used before drop
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    inputImage.src = e.target.result;
+                    inputPreview.classList.remove("hidden");
+                    inputPreview.classList.add("fade-in");
+                    solveBtn.classList.remove("hidden");
+                    solveBtn.disabled = false;
+                    outputPreview.classList.add("hidden");
+                    placeholderState.classList.remove("hidden");
+                };
+                reader.readAsDataURL(file);
+            }
+
+            // Solve button click
+            solveBtn.addEventListener("click", async () => {
+                // --- BUG FIX: Check currentFile instead of fileInput ---
+                if (!currentFile) {
+                    showError("Please upload an image first.");
+                    return;
+                }
+                hideError();
+
+                solveBtn.disabled = true;
+                placeholderState.classList.add("hidden");
+                outputPreview.classList.add("hidden");
+                loadingState.classList.remove("hidden");
+
+                // UX Improvement: Dynamic loading messages
+                const loadingMessages = ["Analyzing grid...", "Recognizing numbers...", "Solving puzzle..."];
+                let messageIndex = 0;
+                loadingText.textContent = loadingMessages[messageIndex];
+                const loadingInterval = setInterval(() => {
+                    messageIndex = (messageIndex + 1) % loadingMessages.length;
+                    loadingText.textContent = loadingMessages[messageIndex];
+                }, 2000);
+
+                const formData = new FormData();
+                // --- BUG FIX: Append currentFile ---
+                formData.append("file", currentFile);
+
+                try {
+                    const response = await fetch("/solve", {
+                        method: "POST",
+                        body: formData,
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.error || "An unknown server error occurred.");
+                    }
+
+                    outputImage.src = data.image;
+                    outputPreview.classList.remove("hidden");
+                    outputPreview.classList.add("fade-in");
+                } catch (error) {
+                    showError(error.message);
+                    placeholderState.classList.remove("hidden");
+                } finally {
+                    clearInterval(loadingInterval); // Stop the dynamic text
+                    solveBtn.disabled = false;
+                    loadingState.classList.add("hidden");
+                }
+            });
+
+            // UX Improvement: Functions to show/hide the error banner
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorBanner.classList.remove("hidden");
+            }
+
+            function hideError() {
+                errorBanner.classList.add("hidden");
+            }
+
+            // Download button
+            downloadBtn.addEventListener("click", () => {
+                const link = document.createElement("a");
+                link.download = "solved-sudoku.png";
+                link.href = outputImage.src;
+                link.click();
+            });
+
+            // New solve button
+            newSolveBtn.addEventListener("click", () => {
+                currentFile = null;
+                fileInput.value = "";
+                inputPreview.classList.add("hidden");
+                solveBtn.classList.add("hidden");
+                outputPreview.classList.add("hidden");
+                placeholderState.classList.remove("hidden");
+                hideError();
+            });
+        </script>
+    </body>
+</html>
