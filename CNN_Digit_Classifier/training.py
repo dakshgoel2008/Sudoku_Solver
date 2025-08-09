@@ -6,7 +6,14 @@ import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from tensorflow.keras.layers import Conv2D, Dense, Dropout, Flatten, MaxPooling2D
+from tensorflow.keras.layers import (
+    BatchNormalization,
+    Conv2D,
+    Dense,
+    Dropout,
+    Flatten,
+    MaxPooling2D,
+)
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -15,7 +22,7 @@ from tensorflow.keras.utils import to_categorical
 
 # Configuration
 CONFIG = {
-    "path": os.path.join(os.path.dirname(__file__), "db"),
+    "path": "/content/db",
     "test_ratio": 0.2,
     "val_ratio": 0.2,
     "img_dimension": (32, 32, 3),
@@ -113,40 +120,23 @@ def create_data_generators(X_train, y_train, X_val, y_val):
 
 def my_model(num_classes, input_shape):
     """My CNN model for digit recognition"""
-    noOfFilters = 60
-    sizeOfFilter1 = (5, 5)
-    sizeOfFilter2 = (3, 3)
-    sizeOfPool = (2, 2)
-    noOfNode = 500
+    # noOfFilters = 60
+    # sizeOfFilter1 = (5, 5)
+    # sizeOfFilter2 = (3, 3)
+    # sizeOfPool = (2, 2)
+    # noOfNode = 500
     model = Sequential(
         [
-            Conv2D(
-                noOfFilters,
-                sizeOfFilter1,
-                input_shape=input_shape,
-                activation="relu",
-            ),
-            Conv2D(
-                noOfFilters,
-                sizeOfFilter1,
-                activation="relu",
-            ),
-            MaxPooling2D(pool_size=sizeOfPool),
-            Conv2D(
-                noOfFilters // 2,
-                (sizeOfFilter2[0] // 2, sizeOfFilter2[1] // 2),  # FIXED LINE
-                activation="relu",
-            ),
-            Conv2D(
-                noOfFilters,
-                sizeOfFilter2,
-                activation="relu",
-            ),
-            MaxPooling2D(pool_size=sizeOfPool),
-            Dropout(0.5),
+            Conv2D(60, (5, 5), activation="relu", input_shape=input_shape),
+            BatchNormalization(),
+            Conv2D(60, (5, 5), activation="relu"),
+            BatchNormalization(),
+            MaxPooling2D((2, 2)),
+            Conv2D(30, (3, 3), activation="relu", strides=(2, 2)),
+            BatchNormalization(),
             Flatten(),
-            Dense(noOfNode, activation="relu"),
-            Dropout(0.5),
+            Dense(500, activation="relu"),
+            Dropout(0.3),
             Dense(num_classes, activation="softmax"),
         ]
     )
